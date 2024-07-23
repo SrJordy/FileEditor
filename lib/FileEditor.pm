@@ -5,10 +5,21 @@ use File::Spec;
 use Try::Tiny;
 use JSON;
 use Encode qw(decode_utf8);
+use File::HomeDir;  # Módulo para obtener la ruta de la carpeta de inicio del usuario
+use File::Path qw(make_path);
 
 set 'template' => 'template_toolkit';
 set 'layout' => undef;
 set 'charset' => 'UTF-8';
+
+# Obtén la ruta de la carpeta de Descargas y define la subcarpeta
+my $downloads_folder = File::Spec->catdir(File::HomeDir->my_home, 'Downloads');
+my $editor_folder = File::Spec->catdir($downloads_folder, 'EditorArchivos');
+
+# Crea la subcarpeta si no existe
+unless (-d $editor_folder) {
+    make_path($editor_folder);
+}
 
 get '/' => sub {
     template 'index', { 
@@ -22,7 +33,7 @@ post '/save' => sub {
     my $filename = decode_utf8(param('filename'));
     
     try {
-        write_file(File::Spec->catfile('files', $filename), $content);
+        write_file(File::Spec->catfile($editor_folder, $filename), $content);
         send_as JSON => { success => 1, message => "Archivo guardado exitosamente" };
     } catch {
         send_as JSON => { success => 0, message => "Error al guardar el archivo: $_" };
@@ -33,7 +44,7 @@ get '/open' => sub {
     my $filename = decode_utf8(param('filename'));
     
     try {
-        my $content = read_file(File::Spec->catfile('files', $filename));
+        my $content = read_file(File::Spec->catfile($editor_folder, $filename));
         send_as JSON => { success => 1, content => $content };
     } catch {
         send_as JSON => { success => 0, message => "Error al abrir el archivo: $_" };
@@ -45,7 +56,7 @@ get '/list' => sub {
 };
 
 sub list_files {
-    my @files = glob('files/*');
+    my @files = glob(File::Spec->catfile($editor_folder, '*'));
     return [map { (File::Spec->splitpath($_))[2] } @files];
 }
 
