@@ -45,10 +45,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     $(document).ready(function() {
+        var currentFile = null; // Variable para almacenar el archivo actual
+
         function saveFile() {
             var content = $('#editor').val();
             var filename = $('#filename').val();
-            
+            var isEditing = currentFile ? 1 : 0;
+
             if (!filename) {
                 $('#statusMessage').text('El nombre del archivo no puede estar vacío').addClass('text-danger');
                 return;
@@ -56,10 +59,11 @@
 
             $('#statusMessage').text('Guardando...').removeClass('text-success text-danger').addClass('text-info');
             
-            $.post('/save', { content: content, filename: filename }, function(response) {
+            $.post('/save', { content: content, filename: filename, is_editing: isEditing }, function(response) {
                 if (response.success) {
                     $('#statusMessage').text(response.message).removeClass('text-info text-danger').addClass('text-success');
                     refreshFileList();
+                    currentFile = filename; // Actualiza el archivo actual
                 } else {
                     $('#statusMessage').text('Error: ' + response.message).removeClass('text-info text-success').addClass('text-danger');
                 }
@@ -75,7 +79,9 @@
                 if (response.success) {
                     $('#editor').val(response.content);
                     $('#filename').val(filename);
+                    $('#saveFile').text('Modificar').prop('disabled', false); // Cambia el texto del botón a "Modificar"
                     $('#statusMessage').text('Archivo cargado').removeClass('text-info text-danger').addClass('text-success');
+                    currentFile = filename; // Actualiza el archivo actual
                 } else {
                     $('#statusMessage').text('Error: ' + response.message).removeClass('text-info text-success').addClass('text-danger');
                 }
@@ -105,7 +111,8 @@
             reader.onload = function(e) {
                 $('#editor').val(e.target.result);
                 $('#filename').val(file.name);
-                toggleSaveButton(); // Recheck if save button should be enabled
+                $('#saveFile').text('Guardar').prop('disabled', false); // Cambia el texto del botón a "Guardar"
+                currentFile = null; // Resetea el archivo actual
             };
             reader.readAsText(file);
         }
@@ -113,7 +120,7 @@
         function toggleSaveButton() {
             var filename = $('#filename').val().trim();
             var fileContent = $('#editor').val().trim();
-            $('#saveFile').prop('disabled', !filename && !fileContent);
+            $('#saveFile').prop('disabled', !(filename && fileContent));
         }
 
         $('#saveFile').click(function() {
@@ -125,7 +132,8 @@
             $('#filename').val('');
             $('#editor').val('');
             $('#statusMessage').text('');
-            toggleSaveButton(); // Recheck if save button should be enabled
+            $('#saveFile').text('Guardar').prop('disabled', true); // Cambia el texto del botón a "Guardar"
+            currentFile = null; // Resetea el archivo actual
         });
 
         $('#fileUpload').change(handleFileUpload);

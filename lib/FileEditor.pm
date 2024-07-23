@@ -31,9 +31,18 @@ get '/' => sub {
 post '/save' => sub {
     my $content = decode_utf8(param('content'));
     my $filename = decode_utf8(param('filename'));
-    
+    my $is_editing = param('is_editing') || 0;
+
+    my $file_path = File::Spec->catfile($editor_folder, $filename);
+
+    # Validación para archivos repetidos
+    if (-e $file_path && !$is_editing) {
+        send_as JSON => { success => 0, message => "El archivo ya existe. Para modificarlo, usa la opción de edición." };
+        return;
+    }
+
     try {
-        write_file(File::Spec->catfile($editor_folder, $filename), $content);
+        write_file($file_path, $content);
         send_as JSON => { success => 1, message => "Archivo guardado exitosamente" };
     } catch {
         send_as JSON => { success => 0, message => "Error al guardar el archivo: $_" };
@@ -42,9 +51,10 @@ post '/save' => sub {
 
 get '/open' => sub {
     my $filename = decode_utf8(param('filename'));
-    
+    my $file_path = File::Spec->catfile($editor_folder, $filename);
+
     try {
-        my $content = read_file(File::Spec->catfile($editor_folder, $filename));
+        my $content = read_file($file_path);
         send_as JSON => { success => 1, content => $content };
     } catch {
         send_as JSON => { success => 0, message => "Error al abrir el archivo: $_" };
