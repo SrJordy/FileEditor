@@ -1,0 +1,11 @@
+#editor {
+    height: 400px;
+}
+
+.file-item {
+    cursor: pointer;
+}
+
+.file-item:hover {
+    background-color: #f8f9fa;
+}
